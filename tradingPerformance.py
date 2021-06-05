@@ -315,7 +315,7 @@ class PerformanceEstimator:
                                  ["Sharpe Ratio", "{0:.3f}".format(self.sharpeRatio)],
                                  ["Sortino Ratio", "{0:.3f}".format(self.sortinoRatio)],
                                  ["Maximum Drawdown", "{0:.2f}".format(self.maxDD) + '%'],
-                                 ["Maximum Drawdown Duration", "{0:.0f}".format(self.maxDDD) + ' days'],
+                                 ["Maximum Drawdown Duration", "{0:.0f}".format(self.maxDDD) + ' periods'],
                                  ["Profitability", "{0:.2f}".format(self.profitability) + '%'],
                                  ["Ratio Average Profit/Loss", "{0:.3f}".format(self.averageProfitLossRatio)],
                                  ["Skewness", "{0:.3f}".format(self.skewness)]]

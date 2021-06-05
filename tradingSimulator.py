@@ -41,6 +41,10 @@ startingDate = '2012-1-1'
 endingDate = '2020-1-1'
 splitingDate = '2018-1-1'
 
+#startingDate = '2021-01-01 00:00:00'
+#endingDate = '2021-06-01 00:00:00'
+#splitingDate = '2021-05-20 00:00:00'
+
 # Variables defining the default observation and state spaces
 stateLength = 30
 observationSpace = 1 + (stateLength-1)*4
@@ -138,6 +142,13 @@ companies = {
     'Kirin' : '2503.T'
 }
 
+cryptos = {
+    'Bitcoin': 'BTCUSDT',
+    'Etherium': 'ETHUSDT',
+    'Ripple': 'XRPUSDT',
+    'Cardano': 'ADAUSDT'
+}
+
 # Dictionary listing the classical trading strategies supported
 strategies = {
     'Buy and Hold' : 'BuyAndHold',
@@ -224,7 +235,9 @@ class TradingSimulator:
         elif(stockName in indices):
             stock = indices[stockName]
         elif(stockName in companies):
-            stock = companies[stockName]    
+            stock = companies[stockName]
+        elif(stockName in cryptos):
+            stock = cryptos[stockName]  
         # Error message if the stock specified is not valid or not supported
         else:
             print("The stock specified is not valid, only the following stocks are supported:")
@@ -233,6 +246,8 @@ class TradingSimulator:
             for stock in indices:
                 print("".join(['- ', stock]))
             for stock in companies:
+                print("".join(['- ', stock]))
+            for stock in cryptos:
                 print("".join(['- ', stock]))
             raise SystemError("Please check the stock specified.")
         
@@ -295,22 +310,22 @@ class TradingSimulator:
         # Plot the first graph -> Evolution of the stock market price
         trainingEnv.data['Close'].plot(ax=ax1, color='blue', lw=2)
         testingEnv.data['Close'].plot(ax=ax1, color='blue', lw=2, label='_nolegend_') 
-        ax1.plot(data.loc[data['Action'] == 1.0].index, 
-                 data['Close'][data['Action'] == 1.0],
-                 '^', markersize=5, color='green')   
-        ax1.plot(data.loc[data['Action'] == -1.0].index, 
-                 data['Close'][data['Action'] == -1.0],
-                 'v', markersize=5, color='red')
+        ax1.scatter(data.loc[data['Action'] == 1.0].index, 
+                    data['Close'][data['Action'] == 1.0],
+                    marker='^', s=50, color='green')   
+        ax1.scatter(data.loc[data['Action'] == -1.0].index, 
+                    data['Close'][data['Action'] == -1.0],
+                    marker='v', s=50, color='red')
         
         # Plot the second graph -> Evolution of the trading capital
         trainingEnv.data['Money'].plot(ax=ax2, color='blue', lw=2)
         testingEnv.data['Money'].plot(ax=ax2, color='blue', lw=2, label='_nolegend_') 
-        ax2.plot(data.loc[data['Action'] == 1.0].index, 
-                 data['Money'][data['Action'] == 1.0],
-                 '^', markersize=5, color='green')   
-        ax2.plot(data.loc[data['Action'] == -1.0].index, 
-                 data['Money'][data['Action'] == -1.0],
-                 'v', markersize=5, color='red')
+        ax2.scatter(data.loc[data['Action'] == 1.0].index, 
+                    data['Money'][data['Action'] == 1.0],
+                    marker='^', s=50, color='green')   
+        ax2.scatter(data.loc[data['Action'] == -1.0].index, 
+                    data['Money'][data['Action'] == -1.0],
+                    marker='v', s=50, color='red')
 
         # Plot the vertical line seperating the training and testing datasets
         ax1.axvline(pd.Timestamp(splitingDate), color='black', linewidth=2.0)
@@ -319,6 +334,8 @@ class TradingSimulator:
         # Generation of the two legends and plotting
         ax1.legend(["Price", "Long",  "Short", "Train/Test separation"])
         ax2.legend(["Capital", "Long", "Short", "Train/Test separation"])
+        if not os.path.exists('Figures'):
+            os.makedirs('Figures')
         plt.savefig(''.join(['Figures/', str(trainingEnv.marketSymbol), '_TrainingTestingRendering', '.png'])) 
         #plt.show()
 
@@ -370,7 +387,7 @@ class TradingSimulator:
             ai = False
         elif(strategyName in strategiesAI):
             strategy = strategiesAI[strategyName]
-            trainingParameters = [numberOfEpisodes]
+            trainingParameters = [numberOfEpisodes, startingDate, splitingDate, endingDate]
             ai = True
         # Error message if the strategy specified is not valid or not supported
         else:
@@ -387,7 +404,9 @@ class TradingSimulator:
         elif(stockName in indices):
             stock = indices[stockName]
         elif(stockName in companies):
-            stock = companies[stockName]    
+            stock = companies[stockName] 
+        elif(stockName in cryptos):
+            stock = cryptos[stockName]     
         # Error message if the stock specified is not valid or not supported
         else:
             print("The stock specified is not valid, only the following stocks are supported:")
@@ -396,6 +415,8 @@ class TradingSimulator:
             for stock in indices:
                 print("".join(['- ', stock]))
             for stock in companies:
+                print("".join(['- ', stock]))
+            for stock in cryptos:
                 print("".join(['- ', stock]))
             raise SystemError("Please check the stock specified.")
 
@@ -505,7 +526,9 @@ class TradingSimulator:
         elif(stockName in indices):
             stock = indices[stockName]
         elif(stockName in companies):
-            stock = companies[stockName]    
+            stock = companies[stockName]  
+        elif(stockName in cryptos):
+            stock = cryptos[stockName]  
         # Error message if the stock specified is not valid or not supported
         else:
             print("The stock specified is not valid, only the following stocks are supported:")
@@ -514,6 +537,8 @@ class TradingSimulator:
             for stock in indices:
                 print("".join(['- ', stock]))
             for stock in companies:
+                print("".join(['- ', stock]))
+            for stock in cryptos:
                 print("".join(['- ', stock]))
             raise SystemError("Please check the stock specified.")
         

@@ -16,6 +16,8 @@ import random
 import copy
 import datetime
 
+import ipdb
+
 import numpy as np
 
 from collections import deque
@@ -51,8 +53,8 @@ batchSize = 32
 experiencesRequired = 1000
 
 # Default parameters related to the Deep Neural Network
-numberOfNeurons = 512
-dropout = 0.2
+numberOfNeurons = 1024
+dropout = 0.5
 
 # Default parameters related to the Epsilon-Greedy exploration technique
 epsilonStart = 1.0
@@ -654,8 +656,8 @@ class TDQN:
             score = np.zeros((len(trainingEnvList), trainingParameters[0]))
             # Testing performance
             marketSymbol = trainingEnv.marketSymbol
-            startingDate = trainingEnv.endingDate
-            endingDate = '2020-1-1'
+            startingDate = trainingEnv.endingDate # Actual splitting date
+            endingDate = trainingParameters[3] # Actual ending date
             money = trainingEnv.data['Money'][0]
             stateLength = trainingEnv.stateLength
             transactionCosts = trainingEnv.transactionCosts
@@ -755,6 +757,8 @@ class TDQN:
         # If required, show the rendering of the trading environment
         if rendering:
             trainingEnv.render()
+
+        #ipdb.set_trace()
 
         # If required, plot the training results
         if plotTraining:

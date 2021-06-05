@@ -22,6 +22,7 @@ from matplotlib import pyplot as plt
 
 from dataDownloader import AlphaVantage
 from dataDownloader import YahooFinance
+from dataDownloader import Binance
 from dataDownloader import CSVHandler
 from fictiveStockGenerator import StockGenerator
 
@@ -107,13 +108,18 @@ class TradingEnv(gym.Env):
             if(exists):
                 self.data = csvConverter.CSVToDataframe(csvName)
             # Otherwise, download the stock market data from Yahoo Finance and save it in the database
-            else:  
-                downloader1 = YahooFinance()
-                downloader2 = AlphaVantage()
-                try:
-                    self.data = downloader1.getDailyData(marketSymbol, startingDate, endingDate)
-                except:
-                    self.data = downloader2.getDailyData(marketSymbol, startingDate, endingDate)
+            else:
+                if marketSymbol[-4:]=='USDT':
+                    print(f"Downloading data for {marketSymbol}...")
+                    downloader = Binance()
+                    self.data = downloader.getIntradayData(marketSymbol, startingDate, endingDate, minutes=60)
+                else:
+                    downloader1 = YahooFinance()
+                    downloader2 = AlphaVantage()
+                    try:
+                        self.data = downloader1.getDailyData(marketSymbol, startingDate, endingDate)
+                    except:
+                        self.data = downloader2.getDailyData(marketSymbol, startingDate, endingDate)
 
                 if saving == True:
                     csvConverter.dataframeToCSV(csvName, self.data)
@@ -377,25 +383,27 @@ class TradingEnv(gym.Env):
 
         # Plot the first graph -> Evolution of the stock market price
         self.data['Close'].plot(ax=ax1, color='blue', lw=2)
-        ax1.plot(self.data.loc[self.data['Action'] == 1.0].index, 
-                 self.data['Close'][self.data['Action'] == 1.0],
-                 '^', markersize=5, color='green')   
-        ax1.plot(self.data.loc[self.data['Action'] == -1.0].index, 
-                 self.data['Close'][self.data['Action'] == -1.0],
-                 'v', markersize=5, color='red')
-        
+        ax1.scatter(self.data.loc[self.data['Action'] == 1.0].index, 
+                    self.data['Close'][self.data['Action'] == 1.0],
+                    marker='^', s=50, color='green')   
+        ax1.scatter(self.data.loc[self.data['Action'] == -1.0].index, 
+                    self.data['Close'][self.data['Action'] == -1.0],
+                    marker='v', s=50, color='red')
+
         # Plot the second graph -> Evolution of the trading capital
         self.data['Money'].plot(ax=ax2, color='blue', lw=2)
-        ax2.plot(self.data.loc[self.data['Action'] == 1.0].index, 
-                 self.data['Money'][self.data['Action'] == 1.0],
-                 '^', markersize=5, color='green')   
-        ax2.plot(self.data.loc[self.data['Action'] == -1.0].index, 
-                 self.data['Money'][self.data['Action'] == -1.0],
-                 'v', markersize=5, color='red')
+        ax2.scatter(self.data.loc[self.data['Action'] == 1.0].index, 
+                    self.data['Money'][self.data['Action'] == 1.0],
+                    marker='^', s=50, color='green')   
+        ax2.scatter(self.data.loc[self.data['Action'] == -1.0].index, 
+                    self.data['Money'][self.data['Action'] == -1.0],
+                    marker='v', s=50, color='red')
         
         # Generation of the two legends and plotting
         ax1.legend(["Price", "Long",  "Short"])
         ax2.legend(["Capital", "Long", "Short"])
+        if not os.path.exists('Figures'):
+            os.makedirs('Figures')
         plt.savefig(''.join(['Figures/', str(self.marketSymbol), '_Rendering', '.png']))
         #plt.show()
 

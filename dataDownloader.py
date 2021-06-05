@@ -14,6 +14,9 @@ Institution: University of Liège
 import pandas as pd
 import pandas_datareader as pdr
 import requests
+import os
+from datetime import datetime
+import time
 
 from io import StringIO
 
@@ -262,3 +265,175 @@ class CSVHandler:
                            index_col='Timestamp',
                            parse_dates=True)
     
+
+###############################################################################
+############################## Class AlphaVantage #############################
+###############################################################################
+
+class Binance:
+    """
+    GOAL: Downloading market data from the Binance API. See the
+          Binance documentation for more information.
+    
+    VARIABLES:  - link: Link to the Binance website.
+                - datatype: 'csv' or 'json' data format.
+                - outputsize: 'full' or 'compact' (only 100 time steps).
+                - data: Pandas dataframe containing the stock market data.
+                                
+    METHODS:    - __init__: Object constructor initializing some variables.
+                - getDailyData: Retrieve daily stock market data.
+                - getIntradayData: Retrieve intraday stock market data.
+                - processDataframe: Process the dataframe to homogenize the format.
+    """
+
+    def __init__(self):
+        """
+        GOAL: Object constructor initializing the class variables. 
+        
+        INPUTS: /      
+        
+        OUTPUTS: /
+        """
+        
+        self.link = "https://api.binance.com/api/v3/klines"
+        self.datatype = 'csv'
+        self.outputsize = 'full'
+        self.data = pd.DataFrame()     
+
+        self.klines_columns = [
+            'Open time',
+            'Open',
+            'High',
+            'Low',
+            'Close',
+            'Volume',
+            'Close time',
+            'Quote asset volume',
+            'Number of trades',
+            'Taker buy base asset volume',
+            'Taker buy quote asset volume',
+            'Ignore'
+        ]
+        
+        
+    def getDailyData(self, marketSymbol, startingDate, endingDate):
+        """
+        GOAL: Downloading daily stock market data from the Alpha Vantage API. 
+        
+        INPUTS:     - marketSymbol: Stock market symbol.
+                    - startingDate: Beginning of the trading horizon.
+                    - endingDate: Ending of the trading horizon.
+          
+        OUTPUTS:    - data: Pandas dataframe containing the stock market data.
+        """
+        
+        params = {
+            "symbol": marketSymbol,
+            "interval": "1d",
+            "limit": 1000,
+            "startTime": int(pd.to_datetime(startingDate).timestamp()*1000),
+            "endTime": int(pd.to_datetime(endingDate).timestamp()*1000)
+        }
+        response = requests.get(
+            self.link,
+            params=params
+        )
+        df_klines = pd.DataFrame(response.json())
+        df_klines.columns = self.klines_columns
+        df_klines['Open time'] = pd.to_datetime(df_klines['Open time'], unit='ms')
+        df_klines = df_klines.rename(columns={'Open time': 'Timestamp'})
+        df_klines = df_klines.set_index('Timestamp')
+        
+        df_klines['Open'] = df_klines['Open'].astype(float)
+        df_klines['High'] = df_klines['High'].astype(float)
+        df_klines['Low'] = df_klines['Low'].astype(float)
+        df_klines['Close'] = df_klines['Close'].astype(float)
+        df_klines['Volume'] = df_klines['Volume'].astype(float)
+        
+        # Process the dataframe to homogenize the output format
+        self.data = self.processDataframe(df_klines)
+        if(startingDate != 0 and endingDate != 0):
+            self.data = self.data.loc[startingDate:endingDate]
+
+        return self.data
+        
+        
+    def getIntradayData(self, marketSymbol, startingDate, endingDate, minutes=60):
+        """
+        GOAL: Downloading intraday stock market data from the Alpha Vantage API. 
+        
+        INPUTS:     - marketSymbol: Stock market symbol. 
+                    - startingDate: Beginning of the trading horizon.
+                    - endingDate: Ending of the trading horizon.
+                    - timePeriod: Time step of the stock market data (in minutes).
+          
+        OUTPUTS:    - data: Pandas dataframe containing the stock market data.
+        """
+
+        print(marketSymbol)
+        print(startingDate)
+        print(endingDate)
+        print(minutes)
+        
+        # Round the timePeriod value to the closest accepted value
+        possiblePeriods = [5, 15, 30, 60]
+        if minutes not in possiblePeriods:
+            raise ValueError
+        
+        if minutes == 60:
+            interval = '1h'
+        else:
+            interval = f'{minutes}m'
+
+        dfs = []
+
+        for date in pd.date_range(startingDate, endingDate):
+            params = {
+                "symbol": marketSymbol,
+                "interval": interval,
+                "startTime": int(date.timestamp()*1000),
+                "endTime": int((date + pd.Timedelta('1d')).timestamp()*1000)-1,
+                "limit": 1000
+            }
+            response = requests.get(
+                self.link,
+                params=params
+            )
+            df_klines = pd.DataFrame(response.json())
+            df_klines.columns = self.klines_columns
+            df_klines['Open time'] = pd.to_datetime(df_klines['Open time'], unit='ms')
+            df_klines = df_klines.rename(columns={'Open time': 'Timestamp'})
+            df_klines = df_klines.set_index('Timestamp')
+            
+            df_klines['Open'] = df_klines['Open'].astype(float)
+            df_klines['High'] = df_klines['High'].astype(float)
+            df_klines['Low'] = df_klines['Low'].astype(float)
+            df_klines['Close'] = df_klines['Close'].astype(float)
+            df_klines['Volume'] = df_klines['Volume'].astype(float)
+
+            dfs.append(df_klines)
+            
+        # Process the dataframe to homogenize the output format
+        self.data = self.processDataframe(pd.concat(dfs))
+        if(startingDate != 0 and endingDate != 0):
+            self.data = self.data.loc[startingDate:endingDate]
+
+        return self.data
+    
+    
+    def processDataframe(self, dataframe):
+        """
+        GOAL: Process a downloaded dataframe to homogenize the output format.
+        
+        INPUTS:     - dataframe: Pandas dataframe to be processed.
+          
+        OUTPUTS:    - dataframe: Processed Pandas dataframe.
+        """
+        
+        # Reverse the order of the dataframe (chronological order)
+        dataframe = dataframe.sort_index()
+
+        # Remove useless columns
+        dataframe = dataframe[['Open', 'High', 'Low', 'Close', 'Volume']]
+
+        return dataframe
